@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Product Intelligence Engine Dashboard</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-logo">
+        <div class="logo-icon">🧠</div>
+        <div class="logo-title">
+          <h1>AI Product Intelligence Engine</h1>
+          <p>Commerce-Ready Spec Extraction & Conflict Resolution Pipeline</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <div class="status-badge" id="api-status">
+          <span class="status-dot"></span> API ONLINE
+        </div>
+        <a href="/docs" target="_blank" class="doc-link">Swagger Docs ↗</a>
+      </div>
+    </header>
+
+    <!-- Main Input Section -->
+    <div class="glass-card">
+      <div class="card-title">
+        <span class="icon">📥</span> Input Product Details
+      </div>
+
+      <form id="product-form">
+        <div class="input-grid">
+          <div class="form-group">
+            <label for="brand-input">1. Brand / Manufacturer</label>
+            <input type="text" id="brand-input" placeholder="e.g. Bosch, DeWalt, Apple" required value="Bosch">
+          </div>
+
+          <div class="form-group">
+            <label for="mpn-input">2. Manufacturer Part Number (MPN)</label>
+            <input type="text" id="mpn-input" placeholder="e.g. GSR 18V-55" required value="GSR 18V-55">
+          </div>
+
+          <div class="form-group full-width">
+            <label for="desc-input">3. One-Line Product Description</label>
+            <textarea id="desc-input" rows="2" required placeholder="Short product description...">18V Professional Cordless Drill Driver with Brushless Motor and 55Nm max torque</textarea>
+          </div>
+        </div>
+
+        <div class="preset-container">
+          <span class="preset-label">Quick Presets:</span>
+          <button type="button" class="preset-btn" onclick="loadPreset('bosch')">🔨 Bosch GSR 18V-55 Drill</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('apple')">💻 Apple MacBook Pro M3</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('fluke')">⚡ Fluke 117 Multimeter</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('dewalt')">🪛 DeWalt DCD791B Drill</button>
+        </div>
+
+        <button type="submit" class="btn-primary" id="btn-submit">
+          <span>⚡ Enrich & Process Product Intelligence</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Pipeline Stepper -->
+    <div class="glass-card" style="padding: 16px 24px;">
+      <div class="card-title" style="margin-bottom: 12px; font-size: 14px;">
+        <span class="icon">🔄</span> Pipeline Execution Stepper
+      </div>
+      <div class="pipeline-stepper">
+        <div class="step-card" id="step-1">
+          <div class="step-num">STEP 1</div>
+          <div class="step-name">Normalize</div>
+        </div>
+        <div class="step-card" id="step-2">
+          <div class="step-num">STEP 2</div>
+          <div class="step-name">Research</div>
+        </div>
+        <div class="step-card" id="step-3">
+          <div class="step-num">STEP 3</div>
+          <div class="step-name">Extract</div>
+        </div>
+        <div class="step-card" id="step-4">
+          <div class="step-num">STEP 4</div>
+          <div class="step-name">Conflicts</div>
+        </div>
+        <div class="step-card" id="step-5">
+          <div class="step-num">STEP 5</div>
+          <div class="step-name">Commerce</div>
+        </div>
+        <div class="step-card" id="step-6">
+          <div class="step-num">STEP 6</div>
+          <div class="step-name">Confidence</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Section (Hidden until submitted) -->
+    <div id="results-wrapper" style="display: none;">
+
+      <!-- Metrics Row -->
+      <div class="metrics-grid">
+
+        <!-- Identity & Taxonomy -->
+        <div class="glass-card identity-hero-card">
+          <div class="identity-title-box">
+            <span class="identity-brand-badge" id="res-brand-badge">BRAND</span>
+            <div class="identity-name" id="res-product-name">Product Name</div>
+          </div>
+          <div class="taxonomy-pill-box" id="res-taxonomy-box">
+            <!-- Taxonomy Pills inserted dynamically -->
+          </div>
+        </div>
+
+        <!-- Confidence Score Ring -->
+        <div class="glass-card score-box">
+          <div class="gauge-circle" id="gauge-circle" style="--score-pct: 95;">
+            <div class="score-value" id="res-overall-score">95%</div>
+          </div>
+          <div class="score-label">Overall Confidence</div>
+        </div>
+
+        <!-- Attribute Counts -->
+        <div class="glass-card score-box">
+          <div style="font-size: 28px; font-weight: 800; color: var(--accent-emerald);" id="res-verified-count">12</div>
+          <div class="score-label">Verified Specs</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="res-unverified-count">0 Unverified</div>
+        </div>
+
+      </div>
+
+      <!-- Specifications Section -->
+      <div class="glass-card">
+        <div class="card-title">
+          <span class="icon">🔬</span> Verified Specifications Matrix
+        </div>
+
+        <div class="spec-filter-bar" id="spec-filter-bar">
+          <button class="filter-chip active" onclick="filterSpecs('ALL')">All Specifications</button>
+          <!-- Dynamic Category Chips -->
+        </div>
+
+        <table class="specs-table">
+          <thead>
+            <tr>
+              <th>Specification</th>
+              <th>Normalized Value & Unit</th>
+              <th>Category</th>
+              <th>Confidence</th>
+              <th>Evidence & Source Quote</th>
+            </tr>
+          </thead>
+          <tbody id="specs-tbody">
+            <!-- Rows dynamically inserted -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Conflicts Resolution Section -->
+      <div class="glass-card" id="conflicts-card">
+        <div class="card-title">
+          <span class="icon">⚔️</span> Conflict Detection & AI Resolution Log
+        </div>
+        <div id="conflicts-container">
+          <!-- Conflict Items inserted dynamically -->
+        </div>
+      </div>
+
+      <!-- Commerce Deliverables Card -->
+      <div class="glass-card">
+        <div class="card-title">
+          <span class="icon">🛒</span> Commerce-Ready Output Deliverables
+        </div>
+        <div class="commerce-title-box" id="res-commerce-title">
+          Commerce Title...
+        </div>
+        <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary);" id="res-commerce-desc">
+          Short marketing overview...
+        </div>
+        <div style="font-weight: 700; font-size: 13px; margin-top: 16px;">Key Feature Bullets (Evidence Verified):</div>
+        <ul class="bullet-list" id="res-feature-bullets">
+          <!-- Bullets inserted dynamically -->
+        </ul>
+      </div>
+
+      <!-- JSON Machine-Readable Inspector -->
+      <div class="glass-card">
+        <div class="json-viewer-header">
+          <div class="card-title" style="margin-bottom: 0;">
+            <span class="icon">💻</span> Machine-Readable JSON Payload Output
+          </div>
+          <div>
+            <button class="btn-secondary" onclick="copyJSON()">📋 Copy JSON</button>
+            <button class="btn-secondary" onclick="downloadJSON()">📥 Download .json</button>
+          </div>
+        </div>
+        <pre><code id="json-output">// Processed product intelligence payload...</code></pre>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Evidence Modal -->
+  <div class="modal-overlay" id="evidence-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="color: #ffffff;" id="modal-spec-title">Specification Evidence</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="evidence-quote" id="modal-evidence-text">
+        Evidence quote...
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
