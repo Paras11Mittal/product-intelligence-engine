@@ -137,12 +137,19 @@ class InputNormalizer:
             search_keys.append(f'"{mpn}"')
 
         return {
-            "raw_input": {"brand": raw_brand, "mpn": raw_mpn, "description": raw_description},
-            "normalized_input": {"brand": brand, "mpn": mpn, "description": description},
-            "normalized_brand": brand,  # <-- ADDED THIS
-            "normalized_mpn": mpn,      # <-- ADDED THIS
-            "search_keys": search_keys,
-            "search_query": search_keys[0] if search_keys else None,
-            "validation": {"valid": not errors, "errors": errors},
-            "warnings": warnings,
-        }
+    "raw_input": {"brand": raw_brand, "mpn": raw_mpn, "description": raw_description},
+    "normalized_input": {"brand": brand, "mpn": mpn, "description": description},
+
+    "brand": brand,
+    "mpn": source_mpn,
+    "normalized_brand": brand,
+    "normalized_mpn": mpn,
+
+    "description": description,
+    "clean_description": description,
+
+    "search_keys": search_keys,
+    "search_query": search_keys[0] if search_keys else None,
+    "validation": {"valid": not errors, "errors": errors},
+    "warnings": warnings,
+}

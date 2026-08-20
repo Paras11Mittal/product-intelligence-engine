@@ -220,6 +220,93 @@ input[type="text"], textarea {
   transition: all 0.2s ease;
 }
 
+input[type="file"] {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.upload-help, .csv-status {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.upload-help code {
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+}
+
+.csv-upload-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.csv-process-btn {
+  width: auto;
+  margin: 0;
+}
+
+.csv-preview-title {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 14px 0 8px;
+}
+
+.csv-preview-scroll {
+  overflow-x: auto;
+}
+
+.csv-preview-table {
+  font-size: 12px;
+}
+
+.csv-preview-table td {
+  max-width: 360px;
+}
+
+.csv-results {
+  margin-top: 20px;
+}
+
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-link, .batch-source-link {
+  color: var(--accent-cyan);
+  text-decoration: none;
+}
+
+.source-link {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(10, 13, 20, 0.35);
+  font-size: 13px;
+}
+
+.source-link:hover, .batch-source-link:hover {
+  text-decoration: underline;
+}
+
+.source-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.batch-source-link {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
 input[type="text"]:focus, textarea:focus {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);

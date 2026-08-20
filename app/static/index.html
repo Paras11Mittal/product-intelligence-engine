@@ -71,6 +71,42 @@
       </form>
     </div>
 
+    <!-- Hackathon CSV Batch Input -->
+    <div class="glass-card">
+      <div class="card-title">
+        <span class="icon">📄</span> Hackathon Dataset Upload
+      </div>
+      <p class="upload-help">Upload the provided CSV. The app reads <code>Mfg_Part_Num</code>, <code>Part_Desc</code>, and the available brand columns automatically. Choose the rows and batch size you want to process.</p>
+      <div class="csv-upload-row">
+        <input type="file" id="csv-input" accept=".csv,text/csv">
+      </div>
+      <div class="csv-controls" id="csv-controls" style="display: none;">
+        <label>Start row <input type="number" id="csv-start-row" min="1" value="1"></label>
+        <label>Products per batch
+          <select id="csv-batch-size"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select>
+        </label>
+        <button type="button" class="btn-secondary" id="btn-previous-csv">← Previous</button>
+        <button type="button" class="btn-secondary" id="btn-next-csv">Next →</button>
+        <button type="button" class="btn-primary csv-process-btn" id="btn-process-csv" disabled>
+          <span>⚡ Process Selected Batch</span>
+        </button>
+        <button type="button" class="btn-secondary" id="btn-download-csv" disabled>📥 Download Processed Results</button>
+      </div>
+      <div id="csv-status" class="csv-status">Choose the hackathon CSV file to preview it here.</div>
+      <div id="csv-preview-wrap" style="display: none;">
+        <div class="csv-preview-title">Preview: first 10 products</div>
+        <div class="csv-preview-scroll">
+          <table class="specs-table csv-preview-table">
+            <thead>
+              <tr><th>#</th><th>Brand / Manufacturer</th><th>MPN</th><th>Description</th></tr>
+            </thead>
+            <tbody id="csv-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="csv-results" class="csv-results" style="display: none;"></div>
+    </div>
+
     <!-- Pipeline Stepper -->
     <div class="glass-card" style="padding: 16px 24px;">
       <div class="card-title" style="margin-bottom: 12px; font-size: 14px;">
@@ -173,6 +209,13 @@
         <div id="conflicts-container">
           <!-- Conflict Items inserted dynamically -->
         </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title">
+          <span class="icon">🔗</span> Sources Used
+        </div>
+        <div id="sources-container"></div>
       </div>
 
       <!-- Commerce Deliverables Card -->

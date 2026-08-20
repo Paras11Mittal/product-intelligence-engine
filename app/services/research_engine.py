@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 import httpx
 from app.config import settings
+from app.services.document_processor import DocumentProcessor
 from app.utils.logger import get_logger
 
 logger = get_logger("ResearchEngine")
@@ -36,6 +37,9 @@ class ResearchEngine:
         "homedepot.com", "lowes.com", "zoro.com", "rs-online.com"
     ]
 
+    def __init__(self):
+        self.document_processor = DocumentProcessor()
+
     def classify_source_type(self, domain: str, brand: str) -> tuple[str, float]:
         clean_domain = domain.lower()
         clean_brand = brand.lower()
@@ -60,27 +64,36 @@ class ResearchEngine:
         sources = []
         raw_documents = []
 
-        # Attempt live API search if API keys exist
+        # Search the official manufacturer domain first, then retry with the
+        # full product description when no source is returned.
         if settings.SERPER_API_KEY:
-            api_results = await self._search_serper(queries[0])
+            manufacturer_domain = self.KNOWN_MANUFACTURER_DOMAINS.get(brand.lower())
+            search_query = f'site:{manufacturer_domain} "{mpn}"' if manufacturer_domain else queries[0]
+            api_results = await self._search_serper(search_query, brand)
+
+            if not api_results["sources"]:
+                fallback_query = f'"{mpn}" {brand} {desc[:120]} datasheet'
+                api_results = await self._search_serper(fallback_query, brand)
+
             if api_results:
                 sources.extend(api_results["sources"])
                 raw_documents.extend(api_results["documents"])
 
-        # Fallback / Built-in high-authority research database lookup
-        built_in = self._get_builtin_research(brand, mpn, desc)
-        sources.extend(built_in["sources"])
-        raw_documents.extend(built_in["documents"])
+        # # Fallback / Built-in high-authority research database lookup
+        # built_in = self._get_builtin_research(brand, mpn, desc)
+        # sources.extend(built_in["sources"])
+        # raw_documents.extend(built_in["documents"])
 
         # Sort sources by reliability score descending (Manufacturer sources prioritized)
         sources.sort(key=lambda s: s["reliability_score"], reverse=True)
+        raw_documents = await self.document_processor.process_documents(raw_documents, sources)
 
         return {
             "sources": sources,
             "raw_documents": raw_documents
         }
 
-    async def _search_serper(self, query: str) -> Dict[str, Any]:
+    async def _search_serper(self, query: str, brand: str) -> Dict[str, Any]:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 res = await client.post(
@@ -96,7 +109,7 @@ class ResearchEngine:
                     for item in data.get("organic", [])[:5]:
                         link = item.get("link", "")
                         domain = urllib.parse.urlparse(link).netloc
-                        stype, rscore = self.classify_source_type(domain, query)
+                        stype, rscore = self.classify_source_type(domain, brand)
                         src_id = f"src_web_{idx}"
                         sources.append({
                             "id": src_id,

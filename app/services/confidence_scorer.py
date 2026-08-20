@@ -19,6 +19,19 @@ class ConfidenceScorer:
         identity_verified: bool
     ) -> Dict[str, Any]:
 
+        # A product without any retrieved source has no evidence. Return a clear
+        # zero score instead of a default-looking confidence percentage.
+        if not sources:
+            return {
+                "overall_score": 0.0,
+                "identity_confidence": 0.0,
+                "specifications_confidence": 0.0,
+                "classification_confidence": 0.0,
+                "sources_count": 0,
+                "verified_attributes_count": 0,
+                "unverified_attributes_count": 0
+            }
+
         total_specs = len(specs)
         verified_count = sum(1 for s in specs if s.get("is_verified", False))
         unverified_count = total_specs - verified_count
