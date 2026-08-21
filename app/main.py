@@ -34,7 +34,13 @@ orchestrator = ProductIntelligenceOrchestrator()
 normalizer = InputNormalizer()
 
 # Static files directory
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+# Keep the legacy launch folder in sync with the actively maintained dashboard.
+# This workspace contains both project copies; the main copy owns the frontend.
+_LOCAL_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+_SHARED_STATIC_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "product-intelligence-engine-main", "app", "static")
+)
+STATIC_DIR = _SHARED_STATIC_DIR if os.path.exists(_SHARED_STATIC_DIR) else _LOCAL_STATIC_DIR
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
