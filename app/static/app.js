@@ -37,9 +37,13 @@ function loadPreset(key) {
   document.getElementById('brand-input').value = p.brand;
   document.getElementById('mpn-input').value = p.mpn;
   document.getElementById('desc-input').value = p.desc;
+  document.querySelectorAll('.preset-btn').forEach(button => {
+    button.classList.toggle('active', button.getAttribute('onclick').includes(`'${key}'`));
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initializeTheme();
   checkAPIHealth();
 
   const form = document.getElementById('product-form');
@@ -49,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('csv-input').addEventListener('change', handleCsvUpload);
+  setupModeSwitcher();
+  setupCsvDropzone();
   document.getElementById('btn-process-csv').addEventListener('click', processCsvBatch);
   document.getElementById('btn-previous-csv').addEventListener('click', () => moveCsvBatch(-1));
   document.getElementById('btn-next-csv').addEventListener('click', () => moveCsvBatch(1));
@@ -56,6 +62,58 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('csv-batch-size').addEventListener('change', updateCsvBatchView);
   document.getElementById('btn-download-csv').addEventListener('click', downloadProcessedCsv);
 });
+
+function initializeTheme() {
+  const toggle = document.getElementById('theme-toggle');
+  const savedTheme = localStorage.getItem('dashboard-theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  setTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+  toggle.addEventListener('click', () => {
+    setTheme(document.body.classList.contains('dark-mode') ? 'light' : 'dark');
+  });
+}
+
+function setTheme(theme) {
+  const isDark = theme === 'dark';
+  const toggle = document.getElementById('theme-toggle');
+  document.body.classList.toggle('dark-mode', isDark);
+  toggle.setAttribute('aria-label', `Switch to ${isDark ? 'light' : 'dark'} mode`);
+  toggle.setAttribute('title', `Switch to ${isDark ? 'light' : 'dark'} mode`);
+  localStorage.setItem('dashboard-theme', isDark ? 'dark' : 'light');
+}
+
+function setupModeSwitcher() {
+  const tabs = document.querySelectorAll('.mode-tab');
+  const panels = {
+    single: document.getElementById('single-mode-panel'),
+    batch: document.getElementById('batch-mode-panel')
+  };
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    const mode = tab.dataset.mode;
+    tabs.forEach(item => {
+      const selected = item === tab;
+      item.classList.toggle('active', selected);
+      item.setAttribute('aria-selected', String(selected));
+    });
+    Object.entries(panels).forEach(([name, panel]) => { panel.hidden = name !== mode; });
+  }));
+}
+
+function setupCsvDropzone() {
+  const dropzone = document.getElementById('csv-dropzone');
+  ['dragenter', 'dragover'].forEach(eventName => dropzone.addEventListener(eventName, event => {
+    event.preventDefault();
+    dropzone.classList.add('dragging');
+  }));
+  ['dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, event => {
+    event.preventDefault();
+    dropzone.classList.remove('dragging');
+  }));
+  dropzone.addEventListener('drop', event => {
+    const file = event.dataTransfer.files[0];
+    if (file) handleCsvUpload({ target: { files: [file] } });
+  });
+}
 
 const API_BASE = (window.location.protocol === 'file:' || (window.location.port !== '8000' && window.location.hostname === '')) 
   ? 'http://127.0.0.1:8000' 
@@ -79,7 +137,7 @@ async function processEnrichment() {
 
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
-  btn.innerHTML = '<span>⏳ Processing Pipeline...</span>';
+  btn.innerHTML = '<span class="button-spinner" aria-hidden="true"></span><span>Processing Pipeline...</span>';
 
   // Animate Stepper
   await animateStepper();
@@ -103,7 +161,7 @@ async function processEnrichment() {
     alert(`Failed to enrich product: ${err.message}`);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span>⚡ Enrich & Process Product Intelligence</span>';
+    btn.innerHTML = '<span class="button-content">⚡ Enrich & Process Product Intelligence</span>';
   }
 }
 
@@ -185,6 +243,10 @@ async function handleCsvUpload(event) {
   csvBatchStart = 0;
   csvProcessedResults.clear();
   document.getElementById('csv-controls').style.display = 'flex';
+  document.getElementById('upload-file-name').textContent = file.name;
+  document.getElementById('upload-row-count').textContent = `${csvProducts.length} valid rows`;
+  document.getElementById('upload-badges').hidden = false;
+  document.getElementById('csv-dropzone').classList.add('has-file');
   updateCsvBatchView();
   previewWrap.style.display = 'block';
   processButton.disabled = csvProducts.length === 0;
@@ -347,12 +409,25 @@ function downloadProcessedCsv() {
 }
 
 async function animateStepper() {
+  resetStepper();
   for (let i = 1; i <= 6; i++) {
     const el = document.getElementById(`step-${i}`);
+    const timer = el.querySelector('.step-timer');
     el.className = 'step-card active';
-    await new Promise(r => setTimeout(r, 150));
+    const startedAt = Date.now();
+    const timerId = setInterval(() => { timer.textContent = `${((Date.now() - startedAt) / 1000).toFixed(1)}s`; }, 100);
+    await new Promise(r => setTimeout(r, 220));
+    clearInterval(timerId);
+    timer.textContent = `${((Date.now() - startedAt) / 1000).toFixed(1)}s`;
     el.className = 'step-card completed';
   }
+}
+
+function resetStepper() {
+  document.querySelectorAll('.step-card').forEach(step => {
+    step.className = 'step-card';
+    step.querySelector('.step-timer').textContent = 'Pending';
+  });
 }
 
 function renderResults(data) {

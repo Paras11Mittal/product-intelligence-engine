@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=professional-dark-20260821">
 </head>
 <body>
 
@@ -19,66 +19,88 @@
     <!-- Header -->
     <header class="app-header">
       <div class="brand-logo">
-        <div class="logo-icon">🧠</div>
+        <div class="logo-icon" aria-hidden="true"><span></span><span></span><span></span></div>
         <div class="logo-title">
           <h1>AI Product Intelligence Engine</h1>
-          <p>Commerce-Ready Spec Extraction & Conflict Resolution Pipeline</p>
+          <p>Product research, evidence extraction, and commerce-ready output</p>
         </div>
       </div>
       <div class="header-status">
         <div class="status-badge" id="api-status">
           <span class="status-dot"></span> API ONLINE
         </div>
-        <a href="/docs" target="_blank" class="doc-link">Swagger Docs ↗</a>
+        <a href="/docs" target="_blank" class="doc-link" aria-label="Open Swagger documentation" title="Swagger Docs"><span>API documentation</span> <b>↗</b></a>
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" title="Switch theme">
+          <span class="theme-toggle-sun" aria-hidden="true">☼</span><span class="theme-toggle-moon" aria-hidden="true">☾</span>
+        </button>
       </div>
     </header>
 
+    <nav class="mode-switcher" aria-label="Product input mode">
+      <button type="button" class="mode-tab active" data-mode="single" aria-selected="true">Single inspection</button>
+      <button type="button" class="mode-tab" data-mode="batch" aria-selected="false">Batch CSV upload</button>
+    </nav>
+
     <!-- Main Input Section -->
-    <div class="glass-card">
+    <div class="mode-panel" id="single-mode-panel">
+    <div class="glass-card input-card">
       <div class="card-title">
-        <span class="icon">📥</span> Input Product Details
+        <div><span class="section-kicker">New inspection</span>Product details</div>
+        <span class="section-note">Required fields <b>•</b> 3</span>
       </div>
 
       <form id="product-form">
         <div class="input-grid">
           <div class="form-group">
-            <label for="brand-input">1. Brand / Manufacturer</label>
-            <input type="text" id="brand-input" placeholder="e.g. Bosch, DeWalt, Apple" required value="Bosch">
+            <label for="brand-input">Brand / manufacturer</label>
+            <input type="text" id="brand-input" placeholder="e.g. Bosch, DeWalt, Apple" required>
           </div>
 
           <div class="form-group">
-            <label for="mpn-input">2. Manufacturer Part Number (MPN)</label>
-            <input type="text" id="mpn-input" placeholder="e.g. GSR 18V-55" required value="GSR 18V-55">
+            <label for="mpn-input">Manufacturer part number</label>
+            <input type="text" id="mpn-input" placeholder="e.g. GSR 18V-55" required>
           </div>
 
           <div class="form-group full-width">
-            <label for="desc-input">3. One-Line Product Description</label>
-            <textarea id="desc-input" rows="2" required placeholder="Short product description...">18V Professional Cordless Drill Driver with Brushless Motor and 55Nm max torque</textarea>
+            <label for="desc-input">Product description</label>
+            <textarea id="desc-input" rows="2" required placeholder="Short product description..."></textarea>
           </div>
         </div>
 
         <div class="preset-container">
-          <span class="preset-label">Quick Presets:</span>
-          <button type="button" class="preset-btn" onclick="loadPreset('bosch')">🔨 Bosch GSR 18V-55 Drill</button>
-          <button type="button" class="preset-btn" onclick="loadPreset('apple')">💻 Apple MacBook Pro M3</button>
-          <button type="button" class="preset-btn" onclick="loadPreset('fluke')">⚡ Fluke 117 Multimeter</button>
-          <button type="button" class="preset-btn" onclick="loadPreset('dewalt')">🪛 DeWalt DCD791B Drill</button>
+          <span class="preset-label">Try an example</span>
+          <button type="button" class="preset-btn" onclick="loadPreset('bosch')">Bosch drill</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('apple')">MacBook Pro</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('fluke')">Fluke multimeter</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('dewalt')">DeWalt drill</button>
         </div>
 
         <button type="submit" class="btn-primary" id="btn-submit">
-          <span>⚡ Enrich & Process Product Intelligence</span>
+          <span class="button-content">Run product intelligence <b>→</b></span>
         </button>
       </form>
     </div>
+    </div>
 
     <!-- Hackathon CSV Batch Input -->
-    <div class="glass-card">
+    <div class="mode-panel" id="batch-mode-panel" hidden>
+    <div class="glass-card upload-card">
       <div class="card-title">
-        <span class="icon">📄</span> Hackathon Dataset Upload
+        <div><span class="section-kicker">Bulk processing</span>Upload product catalog</div>
+        <span class="section-note">CSV only</span>
       </div>
       <p class="upload-help">Upload the provided CSV. The app reads <code>Mfg_Part_Num</code>, <code>Part_Desc</code>, and the available brand columns automatically. Choose the rows and batch size you want to process.</p>
       <div class="csv-upload-row">
-        <input type="file" id="csv-input" accept=".csv,text/csv">
+        <input class="visually-hidden" type="file" id="csv-input" accept=".csv,text/csv">
+        <label class="csv-dropzone" id="csv-dropzone" for="csv-input">
+          <span class="dropzone-icon">↑</span>
+          <span class="dropzone-title">Drop a CSV here, or <strong>choose a file</strong></span>
+          <span class="dropzone-hint">Required columns: <code>Mfg_Part_Num</code> and <code>Part_Desc</code></span>
+          <span class="upload-badges" id="upload-badges" hidden>
+            <span class="upload-badge" id="upload-file-name"></span>
+            <span class="upload-badge success" id="upload-row-count"></span>
+          </span>
+        </label>
       </div>
       <div class="csv-controls" id="csv-controls" style="display: none;">
         <label>Start row <input type="number" id="csv-start-row" min="1" value="1"></label>
@@ -106,6 +128,7 @@
       </div>
       <div id="csv-results" class="csv-results" style="display: none;"></div>
     </div>
+    </div>
 
     <!-- Pipeline Stepper -->
     <div class="glass-card" style="padding: 16px 24px;">
@@ -113,29 +136,35 @@
         <span class="icon">🔄</span> Pipeline Execution Stepper
       </div>
       <div class="pipeline-stepper">
-        <div class="step-card" id="step-1">
-          <div class="step-num">STEP 1</div>
+        <div class="step-card" id="step-1" data-step="1">
+          <div class="step-indicator"><span class="step-number">1</span><span class="step-check">✓</span></div><div class="step-meta"><div class="step-num">STEP 1 <span class="step-timer">Pending</span></div>
           <div class="step-name">Normalize</div>
+          </div>
         </div>
-        <div class="step-card" id="step-2">
-          <div class="step-num">STEP 2</div>
+        <div class="step-card" id="step-2" data-step="2">
+          <div class="step-indicator"><span class="step-number">2</span><span class="step-check">✓</span></div><div class="step-meta"><div class="step-num">STEP 2 <span class="step-timer">Pending</span></div>
           <div class="step-name">Research</div>
+          </div>
         </div>
-        <div class="step-card" id="step-3">
-          <div class="step-num">STEP 3</div>
+        <div class="step-card" id="step-3" data-step="3">
+          <div class="step-indicator"><span class="step-number">3</span><span class="step-check">✓</span></div><div class="step-meta"><div class="step-num">STEP 3 <span class="step-timer">Pending</span></div>
           <div class="step-name">Extract</div>
+          </div>
         </div>
-        <div class="step-card" id="step-4">
-          <div class="step-num">STEP 4</div>
+        <div class="step-card" id="step-4" data-step="4">
+          <div class="step-indicator"><span class="step-number">4</span><span class="step-check">✓</span></div><div class="step-meta"><div class="step-num">STEP 4 <span class="step-timer">Pending</span></div>
           <div class="step-name">Conflicts</div>
+          </div>
         </div>
-        <div class="step-card" id="step-5">
-          <div class="step-num">STEP 5</div>
+        <div class="step-card" id="step-5" data-step="5">
+          <div class="step-indicator"><span class="step-number">5</span><span class="step-check">✓</span></div><div class="step-meta"><div class="step-num">STEP 5 <span class="step-timer">Pending</span></div>
           <div class="step-name">Commerce</div>
+          </div>
         </div>
-        <div class="step-card" id="step-6">
-          <div class="step-num">STEP 6</div>
+        <div class="step-card" id="step-6" data-step="6">
+          <div class="step-indicator"><span class="step-number">6</span><span class="step-check">✓</span></div><div class="step-meta"><div class="step-num">STEP 6 <span class="step-timer">Pending</span></div>
           <div class="step-name">Confidence</div>
+          </div>
         </div>
       </div>
     </div>
@@ -266,6 +295,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=professional-dark-20260821"></script>
 </body>
 </html>
