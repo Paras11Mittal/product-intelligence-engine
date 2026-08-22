@@ -1,5 +1,25 @@
-const API_URL='http://127.0.0.1:8000/api/v1/enrich';
+const API_URL='/api/v1/enrich';
 const $=s=>document.querySelector(s),state={response:null,specs:[],csvRows:[],page:1};
+let supabaseClient=null,authIsSignUp=false;
+const agentApp=document.querySelector('main.shell');
+const authGate=document.createElement('section');
+authGate.id='authGate';
+authGate.innerHTML='<div class="auth-gate-card"><p class="eyebrow">PRODUCTINTEL WORKSPACE</p><h1>Your product intelligence agent is ready.</h1><p>Sign in to research products, run the enrichment pipeline, and securely save your results.</p><button class="primary" id="landingAuthButton" type="button">Sign in to continue <b>→</b></button></div>';
+agentApp.before(authGate);
+agentApp.hidden=true;
+const authGateStyles=document.createElement('style');
+authGateStyles.textContent='#authGate{min-height:calc(100vh - 68px);display:grid;place-items:center;padding:48px 20px;background:radial-gradient(circle at 15% 85%,#16b99828,transparent 32%),radial-gradient(circle at 85% 15%,#635bff36,transparent 35%)}.auth-gate-card{width:min(620px,100%);padding:clamp(32px,6vw,64px);border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:var(--shadow);text-align:center}.auth-gate-card h1{font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.06em;margin:10px 0 18px}.auth-gate-card>p:not(.eyebrow){color:var(--muted);font-size:16px;line-height:1.7;margin:0 auto 28px;max-width:510px}.auth-gate-card .primary{margin:auto}';
+document.head.append(authGateStyles);
+const authReady=(async()=>{try{const response=await fetch('/api/v1/auth/config');const config=await response.json();if(!config.enabled){$('#authStatus').textContent='Auth setup needed';return}supabaseClient=window.supabase.createClient(config.url,config.anon_key);const {data:{session}}=await supabaseClient.auth.getSession();updateAuthUI(session);supabaseClient.auth.onAuthStateChange((_event,session)=>updateAuthUI(session))}catch{$('#authStatus').textContent='Auth unavailable'}})();
+function updateAuthUI(session){const signedIn=Boolean(session);$('#authStatus').textContent=signedIn?(session.user.email||'Signed in'):'Sign in to continue';$('#authButton').hidden=signedIn||!supabaseClient;$('#signOutButton').hidden=!signedIn;agentApp.hidden=!signedIn;authGate.hidden=signedIn}
+async function authHeaders(){await authReady;const {data:{session}}=supabaseClient?await supabaseClient.auth.getSession():{data:{session:null}};return session?{Authorization:`Bearer ${session.access_token}`}:{}}
+const nativeFetch=window.fetch.bind(window);
+window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input.url;if(url===API_URL){init={...init,headers:{...(init.headers||{}),...await authHeaders()}}}return nativeFetch(input,init)};
+function openAuthModal(){if(!supabaseClient){$('#authMessage').textContent='Add Supabase credentials to .env, then restart the server.'}else{$('#authMessage').textContent=''}$('#authModal').hidden=false}
+function closeAuthModal(){$('#authModal').hidden=true}
+function setAuthMode(signUp){authIsSignUp=signUp;$('#authTitle').textContent=signUp?'Create an account':'Sign in';$('#authForm button[type="submit"]').innerHTML=signUp?'Create account <b>→</b>':'Sign in <b>→</b>';$('#toggleAuthMode').textContent=signUp?'Already have an account? Sign in':'Need an account? Sign up';$('#authPassword').autocomplete=signUp?'new-password':'current-password'}
+$('#authButton').addEventListener('click',openAuthModal);$('#landingAuthButton').addEventListener('click',openAuthModal);$('#closeAuthModal').addEventListener('click',closeAuthModal);$('#signOutButton').addEventListener('click',async()=>{if(supabaseClient)await supabaseClient.auth.signOut()});$('#toggleAuthMode').addEventListener('click',()=>setAuthMode(!authIsSignUp));
+$('#authForm').addEventListener('submit',async event=>{event.preventDefault();if(!supabaseClient){openAuthModal();return}const email=$('#authEmail').value.trim(),password=$('#authPassword').value;$('#authMessage').textContent='Working…';const result=authIsSignUp?await supabaseClient.auth.signUp({email,password}):await supabaseClient.auth.signInWithPassword({email,password});if(result.error){$('#authMessage').textContent=result.error.message;return}if(authIsSignUp&&!result.data.session){$('#authMessage').textContent='Check your email to confirm your account.';return}closeAuthModal();event.currentTarget.reset()});
 function setTheme(theme){document.body.classList.toggle('dark-mode',theme==='dark');localStorage.setItem('pie-theme',theme);$('#themeToggle').textContent=theme==='dark'?'☾':'☼'}
 setTheme(localStorage.getItem('pie-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 $('#themeToggle').addEventListener('click',()=>setTheme(document.body.classList.contains('dark-mode')?'light':'dark'));

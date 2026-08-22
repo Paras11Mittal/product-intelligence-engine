@@ -107,6 +107,13 @@ class ResearchEngine:
                     docs = []
                     idx = 1
                     for item in data.get("organic", [])[:5]:
+                        # Never research a page that does not mention the exact model.
+                        # This prevents support/contact pages from becoming product facts.
+                        item_text = " ".join(str(item.get(field, "")) for field in ("title", "snippet", "link"))
+                        requested_mpn = re.sub(r"[^A-Z0-9]", "", query.upper().split('"')[1]) if '"' in query else ""
+                        candidate_text = re.sub(r"[^A-Z0-9]", "", item_text.upper())
+                        if requested_mpn and requested_mpn not in candidate_text:
+                            continue
                         link = item.get("link", "")
                         domain = urllib.parse.urlparse(link).netloc
                         stype, rscore = self.classify_source_type(domain, brand)

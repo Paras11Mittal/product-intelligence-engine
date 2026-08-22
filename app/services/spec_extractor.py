@@ -36,6 +36,10 @@ class SpecExtractor:
         "protection": "Environmental",
         "safety": "Safety"
     }
+    _NON_PRODUCT_KEYS = {
+        "phone", "telephone", "fax", "email", "address", "contact", "customer_service",
+        "privacy", "cookie", "copyright", "hours", "sign_in", "log_in", "menu",
+    }
 
     def extract_specs(self, raw_documents: List[Dict[str, Any]], sources_map: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
         extracted = []
@@ -61,6 +65,8 @@ class SpecExtractor:
                     continue
 
                 normalized_key = self._normalize_key(raw_key)
+                if normalized_key in self._NON_PRODUCT_KEYS or self._is_contact_value(raw_val):
+                    continue
                 norm_val, std_unit = extract_numeric_and_unit(raw_val)
                 category = self._categorize_key(normalized_key)
 
@@ -80,6 +86,13 @@ class SpecExtractor:
                 })
 
         return extracted
+
+    @staticmethod
+    def _is_contact_value(value: str) -> bool:
+        """Reject phone/email/URL values accidentally harvested from support pages."""
+        compact = value.strip()
+        phone_digits = re.sub(r"\D", "", compact)
+        return "@" in compact or "http://" in compact.lower() or "https://" in compact.lower() or (len(phone_digits) >= 10 and len(compact) <= 24)
 
     def _normalize_key(self, raw_key: str) -> str:
         clean = raw_key.lower()

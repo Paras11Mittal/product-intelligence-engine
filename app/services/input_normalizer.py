@@ -30,6 +30,16 @@ class InputNormalizer:
         re.IGNORECASE,
     )
     _NORMAL_MPN = re.compile(r"^[A-Z0-9./_+#-]+$")
+    _UNKNOWN_BRANDS = {"", "unknown", "n/a", "na", "none", "--"}
+    _DESCRIPTION_BRANDS: tuple[tuple[str, re.Pattern[str]], ...] = (
+        ("3M", re.compile(r"\b3m\b|\b3mabr[-\s]", re.IGNORECASE)),
+        ("Diablo", re.compile(r"\bdiablo\b", re.IGNORECASE)),
+        ("Bosch", re.compile(r"\bbosch\b", re.IGNORECASE)),
+        ("DeWalt", re.compile(r"\bdewalt\b|\bde walt\b", re.IGNORECASE)),
+        ("Makita", re.compile(r"\bmakita\b", re.IGNORECASE)),
+        ("Milwaukee", re.compile(r"\bmilwaukee\b", re.IGNORECASE)),
+        ("Honeywell", re.compile(r"\bhoneywell\b", re.IGNORECASE)),
+    )
 
     @classmethod
     def normalize(cls, brand: Any, mpn: Any, description: Any) -> dict[str, Any]:
@@ -120,6 +130,8 @@ class InputNormalizer:
         brand = cls._clean_text(raw_brand)
         source_mpn = cls._clean_text(raw_mpn)
         description = cls._clean_text(raw_description)
+        if not brand or brand.lower() in cls._UNKNOWN_BRANDS:
+            brand = cls._infer_brand(description, source_mpn)
         mpn = cls._normalize_mpn(source_mpn, errors, warnings)
 
         for field, value in (("brand", brand), ("mpn", mpn), ("description", description)):
@@ -153,3 +165,12 @@ class InputNormalizer:
     "validation": {"valid": not errors, "errors": errors},
     "warnings": warnings,
 }
+
+    @classmethod
+    def _infer_brand(cls, description: str | None, mpn: str | None) -> str:
+        """Use a conservative description/MPN match; never invent an unknown brand."""
+        candidate = f"{description or ''} {mpn or ''}"
+        for brand, pattern in cls._DESCRIPTION_BRANDS:
+            if pattern.search(candidate):
+                return brand
+        return "Unspecified"

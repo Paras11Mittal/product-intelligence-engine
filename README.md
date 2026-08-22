@@ -81,12 +81,22 @@ python -m uvicorn app.main:app --reload --port 8000
 pytest tests/ -v
 ```
 
+### 5. Connect Supabase (authentication + enrichment history)
+
+1. Create a Supabase project, then run [`supabase/schema.sql`](supabase/schema.sql) in its SQL Editor.
+2. Copy `.env.example` to `.env` and set `SUPABASE_URL` plus `SUPABASE_ANON_KEY` from **Project Settings → API**.
+3. In Supabase **Authentication → URL Configuration**, add your local URL (for example `http://127.0.0.1:8000`) as a redirect URL.
+4. Restart the FastAPI server. The dashboard will show **Sign in**, where users can create an account or sign in. Each completed enrichment is saved to `enrichment_runs` and remains visible only to its owner through Supabase Row Level Security.
+
+When Supabase environment variables are absent, the app remains usable locally but authentication and persistence are disabled. Never expose a Supabase `service_role` key in this project.
+
 ---
 
 ## 📡 API Endpoints
 
 - `POST /api/v1/enrich`: Main enrichment endpoint.
 - `POST /api/v1/enrich/batch`: Batch enrichment for multiple products.
+- `POST /api/v1/enrich/batch/delivery`: Batch enrichment returned as the exact 252-column delivery CSV.
 - `POST /api/v1/pipeline/normalize`: Inspect Stage 1 query generation.
 - `GET /api/v1/schema`: OpenAPI / Output schema specification.
 - `GET /health`: System health check.

@@ -23,4 +23,8 @@ class Settings(BaseModel):
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
+    # Supabase (the anon key is safe to expose to the browser; never expose a service-role key)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").rstrip("/")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
+
 settings = Settings()
