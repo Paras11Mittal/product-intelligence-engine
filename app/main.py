@@ -98,41 +98,6 @@ async def serve_frontend():
       gate.hidden = false;
     }
   });
-  const batchControls = document.querySelector('.batch-controls');
-  if (batchControls && !document.querySelector('#downloadDelivery')) {
-    const download = document.createElement('button');
-    download.id = 'downloadDelivery';
-    download.className = 'small-button';
-    download.type = 'button';
-    download.textContent = 'Download delivery CSV';
-    batchControls.append(download);
-    download.addEventListener('click', async () => {
-      const start = Math.max(1, Number(document.querySelector('#startRow').value || 1)) - 1;
-      const size = Number(document.querySelector('#batchSize').value);
-      const rows = state.csvRows.slice(start, start + size);
-      if (!rows.length) { alert('Upload a valid CSV before downloading the delivery file.'); return; }
-      download.disabled = true;
-      download.textContent = 'Preparing delivery CSV…';
-      try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (typeof authHeaders === 'function') Object.assign(headers, await authHeaders());
-        const response = await fetch('/api/v1/enrich/batch/delivery', {
-          method: 'POST', headers,
-          body: JSON.stringify(rows.map((row) => ({
-            brand: row.Brand || row.brand || 'Unknown',
-            mpn: row.Mfg_Part_Num,
-            description: row.Part_Desc,
-          }))),
-        });
-        if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.detail || 'Could not create delivery CSV.'); }
-        const url = URL.createObjectURL(await response.blob());
-        const link = document.createElement('a');
-        link.href = url; link.download = 'product-intelligence-delivery.csv'; link.click();
-        URL.revokeObjectURL(url);
-      } catch (error) { alert(error.message); }
-      finally { download.disabled = false; download.textContent = 'Download delivery CSV'; }
-    });
-  }
   updateGate();
   window.addEventListener('storage', updateGate);
   window.setInterval(updateGate, 500);
@@ -204,9 +169,12 @@ async def enrich_product_batch(
 ):
     results = []
     for req in requests:
-        res = await orchestrator.run_pipeline(req)
-        await save_enrichment(user, req, res, authorization)
-        results.append(res)
+        try:
+            res = await orchestrator.run_pipeline(req)
+            await save_enrichment(user, req, res, authorization)
+            results.append(res)
+        except Exception as error:
+            logger.error("Batch enrichment failed for %s: %s", req.mpn, error)
     return results
 
 
@@ -222,14 +190,24 @@ async def enrich_product_batch_delivery(
 ):
     """Produces the flat delivery CSV while retaining blank fields for unknown facts."""
     results = []
+    failures = []
     for request in requests:
-        result = await orchestrator.run_pipeline(request)
-        await save_enrichment(user, request, result, authorization)
-        results.append(result)
+        try:
+            result = await orchestrator.run_pipeline(request)
+            await save_enrichment(user, request, result, authorization)
+            results.append(result)
+        except Exception as error:
+            logger.error("Delivery enrichment failed for %s: %s", request.mpn, error)
+            failures.append(f"{request.mpn}: {error}")
     return Response(
         content=delivery_csv(results),
         media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="product-intelligence-delivery.csv"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="product-intelligence-delivery.csv"',
+            "X-Delivery-Submitted": str(len(requests)),
+            "X-Delivery-Successful": str(len(results)),
+            "X-Delivery-Failed": str(len(failures)),
+        },
     )
 
 @app.post(
