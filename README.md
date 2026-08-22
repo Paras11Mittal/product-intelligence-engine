@@ -100,3 +100,6 @@ When Supabase environment variables are absent, the app remains usable locally b
 - `POST /api/v1/pipeline/normalize`: Inspect Stage 1 query generation.
 - `GET /api/v1/schema`: OpenAPI / Output schema specification.
 - `GET /health`: System health check.
+# Product Intelligence Engine
+
+🚀 **Live Prototype:** [https://product-intelligence-engine-3unc.onrender.com](https://product-intelligence-engine-3unc.onrender.com)
