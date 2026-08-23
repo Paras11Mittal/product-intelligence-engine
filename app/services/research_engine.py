@@ -54,7 +54,7 @@ class ResearchEngine:
 
         return ("THIRD_PARTY", settings.THIRD_PARTY_RELIABILITY)
 
-async def research_product(self, norm_input: Dict[str, Any]) -> Dict[str, Any]:
+    async def research_product(self, norm_input: Dict[str, Any]) -> Dict[str, Any]:
         brand = norm_input["normalized_brand"]
         mpn = norm_input["mpn"]
         desc = norm_input["description"]
