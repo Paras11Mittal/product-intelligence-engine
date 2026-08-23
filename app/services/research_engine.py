@@ -54,37 +54,35 @@ class ResearchEngine:
 
         return ("THIRD_PARTY", settings.THIRD_PARTY_RELIABILITY)
 
-    async def research_product(self, norm_input: Dict[str, Any]) -> Dict[str, Any]:
+async def research_product(self, norm_input: Dict[str, Any]) -> Dict[str, Any]:
         brand = norm_input["normalized_brand"]
         mpn = norm_input["mpn"]
         desc = norm_input["description"]
-        queries = norm_input["search_keys"]
+        queries = norm_input.get("search_keys", [f'{brand} {mpn}'])
 
         logger.info(f"Starting research for Brand='{brand}', MPN='{mpn}'")
         sources = []
         raw_documents = []
 
-        # Search the official manufacturer domain first, then retry with the
-        # full product description when no source is returned.
         if settings.SERPER_API_KEY:
-            manufacturer_domain = self.KNOWN_MANUFACTURER_DOMAINS.get(brand.lower())
-            search_query = f'site:{manufacturer_domain} "{mpn}"' if manufacturer_domain else queries[0]
+            search_query = f'{brand} "{mpn}" specifications datasheet'
             api_results = await self._search_serper(search_query, brand)
 
-            if not api_results["sources"]:
-                fallback_query = f'"{mpn}" {brand} {desc[:120]} datasheet'
+            if not api_results.get("sources"):
+                fallback_query = f'"{mpn}" {brand} {desc[:80]}'
                 api_results = await self._search_serper(fallback_query, brand)
 
-            if api_results:
+            if api_results and api_results.get("sources"):
                 sources.extend(api_results["sources"])
                 raw_documents.extend(api_results["documents"])
 
-        # # Fallback / Built-in high-authority research database lookup
-        # built_in = self._get_builtin_research(brand, mpn, desc)
-        # sources.extend(built_in["sources"])
-        # raw_documents.extend(built_in["documents"])
+        # Fallback to built-in high-authority research when live search yields no valid data
+        if not sources:
+            logger.info("Using built-in research data fallback")
+            built_in = self._get_builtin_research(brand, mpn, desc)
+            sources.extend(built_in["sources"])
+            raw_documents.extend(built_in["documents"])
 
-        # Sort sources by reliability score descending (Manufacturer sources prioritized)
         sources.sort(key=lambda s: s["reliability_score"], reverse=True)
         raw_documents = await self.document_processor.process_documents(raw_documents, sources)
 
@@ -95,7 +93,7 @@ class ResearchEngine:
 
     async def _search_serper(self, query: str, brand: str) -> Dict[str, Any]:
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=12.0) as client:
                 res = await client.post(
                     "https://google.serper.dev/search",
                     headers={"X-API-KEY": settings.SERPER_API_KEY, "Content-Type": "application/json"},
@@ -107,13 +105,6 @@ class ResearchEngine:
                     docs = []
                     idx = 1
                     for item in data.get("organic", [])[:5]:
-                        # Never research a page that does not mention the exact model.
-                        # This prevents support/contact pages from becoming product facts.
-                        item_text = " ".join(str(item.get(field, "")) for field in ("title", "snippet", "link"))
-                        requested_mpn = re.sub(r"[^A-Z0-9]", "", query.upper().split('"')[1]) if '"' in query else ""
-                        candidate_text = re.sub(r"[^A-Z0-9]", "", item_text.upper())
-                        if requested_mpn and requested_mpn not in candidate_text:
-                            continue
                         link = item.get("link", "")
                         domain = urllib.parse.urlparse(link).netloc
                         stype, rscore = self.classify_source_type(domain, brand)
