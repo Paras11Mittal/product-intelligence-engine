@@ -228,4 +228,4 @@ async def get_output_schema():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="product-intelligence-engine-3unc.onrender.com", port=8000, reload=True)
