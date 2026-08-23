@@ -228,4 +228,14 @@ async def get_output_schema():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="product-intelligence-engine-3unc.onrender.com", port=8000, reload=True)
+    import os
+    
+    # Render assigns the port dynamically via the PORT environment variable
+    port = int(os.environ.get("PORT", 8000))
+    
+    uvicorn.run(
+        "app.main:app", 
+        host="0.0.0.0", 
+        port=port, 
+        reload=False
+    )

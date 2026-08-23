@@ -1,6 +1,14 @@
+import os
 import uvicorn
 
 if __name__ == "__main__":
-    print("Starting AI Product Intelligence Engine server on http://127.0.0.1:8000")
-    print("Interactive Swagger UI Docs: http://127.0.0.1:8000/docs")
-    uvicorn.run("app.main:app", host="product-intelligence-engine-3unc.onrender.com", port=8000, reload=True)
+    # Render assigns a dynamic port, so we must read it from the environment.
+    # We fall back to 8000 for local development.
+    port = int(os.environ.get("PORT", 8000))
+    
+    uvicorn.run(
+        "app.main:app", 
+        host="0.0.0.0", 
+        port=port, 
+        reload=False  # Turn off reload in production!
+    )
