@@ -49,10 +49,7 @@ normalizer = InputNormalizer()
 # Keep the legacy launch folder in sync with the actively maintained dashboard.
 # This workspace contains both project copies; the main copy owns the frontend.
 _LOCAL_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-_SHARED_STATIC_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "product-intelligence-engine-main", "app", "static")
-)
-STATIC_DIR = _SHARED_STATIC_DIR if os.path.exists(_SHARED_STATIC_DIR) else _LOCAL_STATIC_DIR
+STATIC_DIR = _LOCAL_STATIC_DIR
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -60,52 +57,11 @@ if os.path.exists(STATIC_DIR):
 async def serve_frontend():
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
-        # This inline gate is intentionally served with each page response so the
-        # dashboard cannot flash before the browser has loaded cached JavaScript.
+        # Serve the marketing and inspection page directly; API routes enforce auth.
         with open(index_path, "r", encoding="utf-8") as file:
             html = file.read()
-        auth_gate = """
-<style>
-#authGate{min-height:calc(100vh - 68px);display:grid;place-items:center;padding:48px 20px;background:radial-gradient(circle at 15% 85%,#16b99828,transparent 32%),radial-gradient(circle at 85% 15%,#635bff36,transparent 35%)}
-.auth-gate-card{width:min(620px,100%);padding:clamp(32px,6vw,64px);border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:var(--shadow);text-align:center}.auth-gate-card h1{font-size:clamp(34px,5vw,58px);line-height:1.05;letter-spacing:-.06em;margin:10px 0 18px}.auth-gate-card>p:not(.eyebrow){color:var(--muted);font-size:16px;line-height:1.7;margin:0 auto 28px;max-width:510px}.auth-gate-card .primary{margin:auto}
-#authModal{background:radial-gradient(circle at 50% 18%,#8178ff30,transparent 38%),rgba(5,9,22,.9);backdrop-filter:blur(14px)}#authModal .modal-card{width:min(480px,calc(100vw - 32px));padding:42px;background:linear-gradient(145deg,rgba(29,38,70,.98),rgba(16,22,45,.99));border:1px solid rgba(160,154,255,.28);box-shadow:0 28px 90px rgba(0,0,0,.52)}#authModal .modal-card:before{content:'PRODUCTINTEL';display:block;color:var(--accent);font:600 10px 'JetBrains Mono';letter-spacing:.14em;margin-bottom:22px}#authModal .modal-card h2{font-size:32px;margin-bottom:4px}#authModal .modal-card h2:after{content:'Secure access to your intelligence workspace';display:block;color:var(--muted);font:400 13px 'Plus Jakarta Sans';letter-spacing:0;margin-top:10px}#authModal .auth-form{gap:17px;margin-top:30px}#authModal .auth-form label{gap:9px}#authModal .primary{margin-top:10px;padding:15px}#authModal .text-button{padding:10px}
-</style>
-<script>
-(() => {
-  const agent = document.querySelector('main.shell');
-  if (!agent) return;
-  let gate = document.querySelector('#authGate');
-  if (!gate) {
-    gate = document.createElement('section');
-    gate.id = 'authGate';
-    gate.innerHTML = '<div class="auth-gate-card"><p class="eyebrow">PRODUCTINTEL WORKSPACE</p><h1>Your product intelligence agent is ready.</h1><p>Sign in to research products, run the enrichment pipeline, and securely save your results.</p><button class="primary" id="landingAuthButton" type="button">Sign in to continue <b>→</b></button></div>';
-    agent.before(gate);
-  }
-  const updateGate = () => {
-    const key = Object.keys(localStorage).find((item) => /^sb-.*-auth-token$/.test(item));
-    let session = null;
-    try { session = key ? JSON.parse(localStorage.getItem(key)) : null; } catch (_) {}
-    const signedIn = Boolean(session && session.access_token);
-    agent.hidden = !signedIn;
-    gate.hidden = signedIn;
-  };
-  document.addEventListener('click', (event) => {
-    if (event.target.closest('#landingAuthButton') || event.target.closest('#authButton')) {
-      const modal = document.querySelector('#authModal');
-      if (modal) { gate.hidden = true; modal.hidden = false; }
-    }
-    if (event.target.closest('#closeAuthModal')) {
-      gate.hidden = false;
-    }
-  });
-  updateGate();
-  window.addEventListener('storage', updateGate);
-  window.setInterval(updateGate, 500);
-})();
-</script>
-"""
         return HTMLResponse(
-            html.replace("</body>", f"{auth_gate}</body>"),
+            html,
             headers={"Cache-Control": "no-store, max-age=0", "Clear-Site-Data": '"cache"'},
         )
     return {"message": "AI Product Intelligence Backend API is running."}
