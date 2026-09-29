@@ -1,8 +1,7 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends, Header, Request
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import Response
 from typing import List
 from app.config import settings
 from app.schemas.input_schema import ProductEnrichRequest
@@ -23,48 +22,25 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Enable CORS for web clients
+allowed_origins = [
+    origin.strip().rstrip("/")
+    for origin in settings.CORS_ALLOWED_ORIGINS.split(",")
+    if origin.strip()
+]
+
+# The frontend is hosted separately. Browser requests authenticate with an
+# Authorization bearer header; the API does not rely on cross-site cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_origin_regex=settings.CORS_ALLOWED_ORIGIN_REGEX or None,
+    allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
-
-
-@app.middleware("http")
-async def prevent_dashboard_caching(request: Request, call_next):
-    """Always serve the latest local dashboard files during development."""
-    response = await call_next(request)
-    if request.url.path == "/" or request.url.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "no-store, max-age=0"
-        response.headers["Clear-Site-Data"] = '"cache"'
-    return response
 
 orchestrator = ProductIntelligenceOrchestrator()
 normalizer = InputNormalizer()
-
-# Static files directory
-# Keep the legacy launch folder in sync with the actively maintained dashboard.
-# This workspace contains both project copies; the main copy owns the frontend.
-_LOCAL_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-STATIC_DIR = _LOCAL_STATIC_DIR
-if os.path.exists(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-@app.get("/", tags=["Frontend Web App"])
-async def serve_frontend():
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    if os.path.exists(index_path):
-        # Serve the marketing and inspection page directly; API routes enforce auth.
-        with open(index_path, "r", encoding="utf-8") as file:
-            html = file.read()
-        return HTMLResponse(
-            html,
-            headers={"Cache-Control": "no-store, max-age=0", "Clear-Site-Data": '"cache"'},
-        )
-    return {"message": "AI Product Intelligence Backend API is running."}
 
 @app.get("/health", tags=["Health"])
 async def health_check():

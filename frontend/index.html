@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/style.css" />
-    <link rel="stylesheet" href="/static/overrides.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./overrides.css" />
     <style>
       .header-actions {
         gap: 12px;
@@ -484,8 +484,8 @@
             <a href="#top" aria-label="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5a9.5 9.5 0 0 0-3 18.52c.47.08.65-.2.65-.46v-1.63c-2.65.58-3.21-1.12-3.21-1.12-.43-1.1-1.06-1.4-1.06-1.4-.87-.6.07-.6.07-.6.96.07 1.47.98 1.47.98.85 1.46 2.24 1.04 2.78.8.08-.62.33-1.04.6-1.28-2.12-.24-4.35-1.06-4.35-4.72 0-1.04.37-1.9.98-2.57-.1-.24-.43-1.22.09-2.54 0 0 .8-.26 2.61.98a9.1 9.1 0 0 1 4.75 0c1.81-1.24 2.6-.98 2.6-.98.53 1.32.2 2.3.1 2.54.61.67.97 1.53.97 2.57 0 3.67-2.23 4.47-4.36 4.71.35.3.65.88.65 1.78v2.48c0 .26.17.55.65.46A9.5 9.5 0 0 0 12 2.5Z"/></svg></a>
           </div>
         </div>
-        <div><h3>Product</h3><a href="#features">Features</a><a href="#solutions">Batch Uploading</a><a href="#solutions">Integrations</a><a href="/docs">API Docs</a></div>
-        <div><h3>Resources</h3><a href="#blog">Blog</a><a href="#blog">Case Studies</a><a href="#blog">Help Center</a><a href="/redoc">Documentation</a></div>
+        <div><h3>Product</h3><a href="#features">Features</a><a href="#solutions">Batch Uploading</a><a href="#solutions">Integrations</a><a data-api-path="/docs" href="/docs">API Docs</a></div>
+        <div><h3>Resources</h3><a href="#blog">Blog</a><a href="#blog">Case Studies</a><a href="#blog">Help Center</a><a data-api-path="/redoc" href="/redoc">Documentation</a></div>
         <div><h3>Company</h3><a href="#top">About Us</a><a href="mailto:hello@productintel.example">Contact</a><a href="#pricing">Privacy</a><a href="#pricing">Terms</a></div>
       </div>
       <div class="footer-bottom"><span>© <span id="copyrightYear"></span> ProductIntel. All rights reserved.</span></div>
@@ -575,6 +575,7 @@
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/static/app.js"></script>
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-# 🧠 AI Product Intelligence Orchestration Engine (Backend)
+# AI Product Intelligence Engine
 
 An AI-powered product intelligence engine built for e-commerce and industrial cataloging. It accepts minimal inputs (**Brand**, **MPN**, **Description**) and transforms them into rich, evidence-backed, commerce-ready structured JSON product intelligence.
 
@@ -46,7 +46,7 @@ An AI-powered product intelligence engine built for e-commerce and industrial ca
 
 ---
 
-## 🚀 Quick Start & How to Run
+## Quick Start
 
 ### 1. Installation
 
@@ -61,7 +61,7 @@ pip install -r requirements.txt
 python run_demo.py
 ```
 
-### 3. Run FastAPI Server
+### Run the API
 
 You can start the server using either of these commands:
 
@@ -74,8 +74,34 @@ python -m uvicorn app.main:app --reload --port 8000
 ```
 - Interactive Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 - OpenAPI JSON Schema: [http://localhost:8000/api/v1/schema](http://localhost:8000/api/v1/schema)
+- Health check: [http://localhost:8000/health](http://localhost:8000/health)
 
-### 4. Run Automated Test Suite
+### Run the frontend locally
+
+The frontend is a standalone static site in `frontend/`. Set `apiBaseUrl` in `frontend/config.js` to `http://127.0.0.1:8000`, then serve the directory with any static server, for example:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+Open `http://127.0.0.1:5500`. The frontend can also use an empty `apiBaseUrl` when the API is hosted on the same origin. Do not open `index.html` directly as a `file://` URL.
+
+## Separate Deployment (Vercel + Render)
+
+The API and frontend are independently deployable:
+
+1. **Deploy the API to Render** from the repository root. Use build command `pip install -r requirements.txt` and start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+2. In the API service environment, set `CORS_ALLOWED_ORIGINS` to the exact frontend origin, such as `https://your-product-intel.vercel.app` (comma-separated for multiple domains). Origins include the scheme and do not include a path or trailing slash. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and the required research provider keys there as well.
+3. **Deploy the `frontend/` directory to Vercel** by setting its project Root Directory to `frontend`. It is a static site: no build command or framework is required.
+4. Set `frontend/config.js` `apiBaseUrl` to the public Render API origin, such as `https://your-product-intel-api.onrender.com` (no trailing slash), then deploy the frontend. This is a public URL, not a secret.
+5. In Supabase Auth URL Configuration, add the Vercel site URL to the allowed site/redirect URLs. Supabase URL and anon key are intentionally delivered to the browser through `/api/v1/auth/config`; never put a service-role key in the frontend.
+
+For Vercel preview URLs, either add each preview origin to `CORS_ALLOWED_ORIGINS` or set a narrowly scoped `CORS_ALLOWED_ORIGIN_REGEX`. Keep production origins explicit. CORS controls which browser origins can read responses; it is not a replacement for API authentication or rate limiting.
+
+The API serves only API endpoints, health, and OpenAPI documentation. It does not serve the frontend. The frontend calls the API through the runtime configuration in `frontend/config.js`.
+
+### Run Automated Test Suite
 
 ```bash
 pytest tests/ -v
@@ -85,7 +111,7 @@ pytest tests/ -v
 
 1. Create a Supabase project, then run [`supabase/schema.sql`](supabase/schema.sql) in its SQL Editor.
 2. Copy `.env.example` to `.env` and set `SUPABASE_URL` plus `SUPABASE_ANON_KEY` from **Project Settings → API**.
-3. In Supabase **Authentication → URL Configuration**, add your local URL (for example `http://127.0.0.1:8000`) as a redirect URL.
+3. In Supabase **Authentication → URL Configuration**, add the frontend URL (for local use, `http://127.0.0.1:5500`; in production, the Vercel site URL) to the allowed site and redirect URLs.
 4. Restart the FastAPI server. The dashboard will show **Sign in**, where users can create an account or sign in. Each completed enrichment is saved to `enrichment_runs` and remains visible only to its owner through Supabase Row Level Security.
 
 When Supabase environment variables are absent, the app remains usable locally but authentication and persistence are disabled. Never expose a Supabase `service_role` key in this project.
@@ -102,4 +128,4 @@ When Supabase environment variables are absent, the app remains usable locally b
 - `GET /health`: System health check.
 # Product Intelligence Engine
 
-🚀 **Live Prototype:** [https://product-intelligence-engine-3unc.onrender.com](https://product-intelligence-engine-3unc.onrender.com)
+**API deployment:** [https://product-intelligence-engine-3unc.onrender.com](https://product-intelligence-engine-3unc.onrender.com)

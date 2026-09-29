@@ -27,4 +27,13 @@ class Settings(BaseModel):
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").rstrip("/")
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
 
+    # Comma-separated browser origins allowed to call this API. Keep these exact
+    # origins (scheme + host + optional port), with no trailing slash.
+    CORS_ALLOWED_ORIGINS: str = os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000",
+    )
+    # Optional regex for preview deployments; prefer explicit origins in production.
+    CORS_ALLOWED_ORIGIN_REGEX: str = os.getenv("CORS_ALLOWED_ORIGIN_REGEX", "")
+
 settings = Settings()

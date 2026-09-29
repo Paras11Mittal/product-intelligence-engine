@@ -55,20 +55,21 @@ The README calls the system “zero hallucination” and “evidence-backed.” 
 | `app/services/delivery_exporter.py` | Maps results into the fixed 252-column CSV shape. |
 | `app/services/supabase.py` | Validates Supabase access tokens and persists runs with the caller's token. |
 | `supabase/schema.sql` | `enrichment_runs` table, index, and row-level security policies. |
-| `app/static/index.html` | Dashboard structure, auth modal, single and batch controls, output area, insights, and footer. |
-| `app/static/style.css` | Original/base dashboard CSS plus prior UI edits. |
-| `app/static/overrides.css` | Dark visual system, responsive landing layout, and expanded output-state layout. |
-| `app/static/app.js` | Frontend auth, theme, form submission, result rendering, CSV upload, and batch flow. |
+| `frontend/index.html` | Dashboard structure, auth modal, single and batch controls, output area, insights, and footer. |
+| `frontend/style.css` | Base dashboard styles. |
+| `frontend/overrides.css` | Dark visual system, responsive landing layout, and expanded output-state layout. |
+| `frontend/app.js` | Frontend auth, theme, form submission, result rendering, CSV upload, and batch flow. |
+| `frontend/config.js` | Runtime API origin configuration for static hosting. |
 | `run_server.py` | Local/deployment server entry point; re-launches with `.venv` if present and chooses bind host/port. |
 | `run_demo.py` | Terminal example that runs three sample products through the orchestrator. |
 | `tests/` | Pipeline, normalizer, and delivery exporter tests; see test caveat below. |
 | `README.md` | Setup notes, product claims, and endpoint list; parts of it are stale. |
 
-There is no `package.json` or frontend compilation step. `package-lock.json`, `app/static/3d-scene.js`, and several root-level CSS-edit helper scripts are present in the working tree, but the dashboard HTML does not load the 3D script and the backend does not use the JavaScript helpers. Confirm whether these are intentionally retained before depending on them.
+There is no frontend compilation step. The unused `frontend/3d-scene.js`, `package-lock.json`, and CSS-edit helper scripts are not runtime dependencies of either deployable service.
 
 ## Request and data flow
 
-1. The browser collects `brand`, `mpn`, and `description` and posts JSON to `POST /api/v1/enrich`.
+1. The independently hosted browser app collects `brand`, `mpn`, and `description` and posts JSON to the configured API origin at `POST /api/v1/enrich`.
 2. FastAPI validates required fields with `ProductEnrichRequest`.
 3. `ProductIntelligenceOrchestrator.run_pipeline()` calls `InputNormalizer`.
 4. `ResearchEngine` searches Serper when `SERPER_API_KEY` is configured. It makes a second query if the first produces no sources. If neither yields sources, it uses its built-in generated fallback.
@@ -92,7 +93,7 @@ There is no `package.json` or frontend compilation step. `package-lock.json`, `a
 
 | Method and path | Purpose | Authentication behavior |
 | --- | --- | --- |
-| `GET /` | Serve `app/static/index.html`. | Public. |
+| `GET /` | No frontend route; the API is deployed separately from the static site. | Not provided. |
 | `GET /health` | Basic process health response. | Public. |
 | `GET /api/v1/auth/config` | Report whether Supabase browser auth is configured and return its URL/anon key. | Public; anon key is designed to be browser-visible. |
 | `GET /api/v1/auth/me` | Validate the current Supabase bearer token. | Requires token only when Supabase is configured. |
@@ -126,13 +127,13 @@ The delivery exporter declares `DELIVERY_COLUMNS` and tests expect exactly 252 o
 - Single inspection has four quick-load presets and renders specification evidence in a modal.
 - Batch mode parses a CSV in the browser, requires `Mfg_Part_Num` and `Part_Desc`, previews records, and enriches selected rows one at a time.
 - Results have a full-width state: the hero is hidden after output appears, the stage spans the content width, specifications and commerce copy sit in a desktop grid, and the result grid stacks on narrow viewports. The selector uses CSS `:has()`, supported by current Chromium-based browsers and modern Safari; check target browser support if expanding it.
-- The insights section renders three mock editorial cards through a simulated asynchronous fetch in `app/static/app.js`; it is not connected to a live blog/CMS. Links are placeholders to page anchors.
+- The insights section renders three mock editorial cards through a simulated asynchronous fetch in `frontend/app.js`; it is not connected to a live blog/CMS. Links are placeholders to page anchors.
 - The footer contains placeholder company/legal/contact destinations. `hello@productintel.example` is not a production contact address.
 - The dashboard is not gated by a server-injected landing screen. API access is still checked server-side when Supabase is configured. With no Supabase configuration, auth is disabled and the enrichment endpoints accept unauthenticated requests.
 
 ## Authentication and persistence
 
-- `SUPABASE_URL` and `SUPABASE_ANON_KEY` enable auth. The browser receives these public settings from `/api/v1/auth/config` and uses Supabase JS sign-in/sign-up.
+- `SUPABASE_URL` and `SUPABASE_ANON_KEY` enable auth. The browser receives these public settings from the API's `/api/v1/auth/config` endpoint and uses Supabase JS sign-in/sign-up. `CORS_ALLOWED_ORIGINS` controls which separately hosted frontends can call the API.
 - `get_current_user()` validates bearer tokens against Supabase Auth's `/auth/v1/user` endpoint.
 - `save_enrichment()` writes to `public.enrichment_runs` with the caller's access token and anon key; row-level security is intended to constrain access to the signed-in user.
 - Persistence errors are intentionally ignored so they do not fail completed enrichment requests.
@@ -171,7 +172,7 @@ The server entry point reads `PORT` (defaults to 8000); with `PORT` set it binds
 ### Security, reliability, and API behavior
 
 1. **Fetched-page URL safety needs review.** `DocumentProcessor` fetches URLs from search results, follows redirects, and has no visible allowlist or private-IP/metadata-address protection. This can create server-side request forgery exposure. The domain skip list is not a network safety control.
-2. **CORS is broad.** FastAPI is configured with `allow_origins=["*"]` and credentials enabled. Restrict allowed origins for deployment.
+2. **Production authentication policy remains an operator decision.** Supabase auth is optional in the current API; deployments that require accounts should configure Supabase and decide whether unauthenticated enrichment should be rejected.
 3. **Auth is optional by design.** If Supabase environment values are absent, enrichment routes do not require authentication. That is suitable only if intentionally acceptable for the deployment.
 4. **Batch errors are lossy.** The JSON batch endpoint silently omits failed records; delivery only supplies submitted/successful/failed counts in headers. Clients cannot reliably map all errors to original input rows from the API response.
 5. **Batch processing is serial.** Both server-side batch routes iterate sequentially. The current browser batch UI also calls single enrichment serially. Its CSV download then calls the delivery route with successful inputs, running enrichment a second time and potentially duplicating Supabase history entries.
@@ -192,7 +193,7 @@ The repository's `AGENTS.md` contains design constraints that future agents shou
 
 ## Working-tree context at the time this brief was written
 
-The tree was not clean. It already contained modified source/assets and untracked helper files before this brief was created. Notable files included changes to `Agents.md`, `app/main.py`, `app/static/app.js`, `app/static/index.html`, `app/static/style.css`, and `run_server.py`, plus untracked `app/static/overrides.css`, `app/static/3d-scene.js`, root styling scripts, a batch file, `CLAUDE.txt`, and `package-lock.json`. Subsequent UI requests also changed the result layout in `app/static/overrides.css`. Do not revert the entire tree or assume these changes belong to a clean baseline; inspect diffs and preserve unrelated work.
+The tree has included user-authored frontend assets and helper files during prior work. Keep the frontend assets in `frontend/` as the static deployment root and avoid reverting unrelated work when updating them.
 
 This document itself is a new file. It should be maintained as architecture changes, routes, setup, and known limitations change.
 
@@ -204,7 +205,7 @@ This document itself is a new file. It should be maintained as architecture chan
 4. Improve extraction into typed candidates; add canonical attribute definitions, robust numeric parsing, unit conversion, and explicit equivalence/tolerance handling.
 5. Calibrate confidence against labeled outcomes or rename scores to make their heuristic nature clear.
 6. Redesign batch APIs to return row-correlated success/error records and avoid re-enriching products during CSV export. Apply concurrency limits and provider rate limits.
-7. Restrict CORS, decide whether auth is mandatory in production, add clear auth-required UI feedback, and document environment setup without secrets.
+7. Decide whether auth is mandatory in production and add rate limiting or quotas appropriate to the exposed enrichment API.
 8. Reconcile tests and README imports/commands with the current code, then add deterministic tests around no-search mode, fabricated-data prevention, auth config states, unsafe URLs, conflict/unit equivalence, batch failures, and CSV ordering.
 9. Replace placeholder API-key/blog/legal/company links with real routes or clearly non-interactive placeholders before public launch.
 10. Remove/ignore generated bytecode and clarify whether root helper scripts, the unused 3D asset, and the minimal npm lockfile are intentional.
